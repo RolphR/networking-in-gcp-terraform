@@ -1,0 +1,4 @@
+.terraform*
+terraform.tfstate*
+defaults.auto.tfvars
+!*/defaults.auto.tfvars
