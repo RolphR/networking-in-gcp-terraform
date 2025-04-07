@@ -9,8 +9,11 @@ resource "google_project_service" "services" {
   disable_on_destroy = false
 }
 
+# Meta-resource for easy 2-stage deployments.
+# See README.md for details
 resource "terraform_data" "network_setup" {
   depends_on = [
+    google_project_service.services,
     google_compute_instance.appliance,
     google_compute_route.default_internet,
     google_compute_route.default_backend_appliance,
