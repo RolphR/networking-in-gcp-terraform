@@ -9,7 +9,8 @@ This example is loosely based on the `Use case: Interconnect multiple networks t
   - During the `plan` in which the `appliance` vm is recreated, the instance group already contains the self_link to the vm
   - Terraform does flag the group as `(known after apply)`, however, the target_link will remain the same after the instance recreate, therefore not triggering an update.
   - Google does remove the instance from the instance group, therefore requiring a re-run of `terraform apply` to re-add the instance back to the instance group
-- The `webserver`, `database`, and `onprem` instances have a startup script to install a basic webserver. This install will only succeed if the `appliance` vm and Cloud NAT are fully up and running.
+- The `webserver`, `database`, and `onprem` instances have a startup script to install a basic webserver. This install will only succeed if the `appliance` vm, Cloud NAT, and other core components are fully set up and running.
+  - The `terraform_data.network_setup` resource was created to be an easy filter for this usecase.
 
 ## Deploy this example
 
@@ -17,7 +18,7 @@ This example is loosely based on the `Use case: Interconnect multiple networks t
 2. Copy `../defaults.auto.tfvars.example` to `../defaults.auto.tfvars` and fill in the variables
 3. Make sure you locally have valid Application Default Credentials by executing `gcloud auth application-default login`
 4. Run `terraform apply -target "terraform_data.network_setup"` to set up the core networking components
-5. Run `terraform apply` to deploy all other components
+5. Run `terraform apply` to deploy all (other) components
 
 Don't forget to clean it up afterwards.
 You can do this by executing `terraform apply -destroy`
@@ -38,27 +39,20 @@ _The diagram can be imported directly into [Excalidraw](https://excalidraw.com)_
 ## Routing
 
 This example has a simplistic network layout and set of routing rules.
-Each network has a Class B range (`/16`) assigned, with the exception of the `onprem` network, which has the "full" class A (`10.0.0.0/8`) minus the first 3 Class B ranges.
+Each network has a `/16` assigned, allocated from the `10.0.0.0/8` range.
+The `onprem` network has the remainder assigned.
 
-The routing table of the `appliance` vm looks like:
+The (filtered) routing table of the `appliance` vm looks like:
 
 ```bash
-$ ip route
-default via 10.0.0.1 dev ens4 proto dhcp src 10.0.0.3 metric 100
-10.0.0.0/24 via 10.0.0.1 dev ens4 proto dhcp src 10.0.0.3 metric 100
+$ ip route | grep -v src
 10.0.0.0/16 via 10.0.0.1 dev ens4
-10.0.0.0/8 via 10.3.0.1 dev ens7
-10.0.0.1 dev ens4 proto dhcp scope link src 10.0.0.3 metric 100
-10.1.0.0/24 via 10.1.0.1 dev ens5 proto dhcp src 10.1.0.3 metric 100
 10.1.0.0/16 via 10.1.0.1 dev ens5
-10.1.0.1 dev ens5 proto dhcp scope link src 10.1.0.3 metric 100
-10.2.0.0/24 via 10.2.0.1 dev ens6 proto dhcp src 10.2.0.3 metric 100
 10.2.0.0/16 via 10.2.0.1 dev ens6
-10.2.0.1 dev ens6 proto dhcp scope link src 10.2.0.3 metric 100
-10.3.0.0/24 via 10.3.0.1 dev ens7 proto dhcp src 10.3.0.3 metric 100
-10.3.0.1 dev ens7 proto dhcp scope link src 10.3.0.3 metric 100
-169.254.169.254 via 10.0.0.1 dev ens4 proto dhcp src 10.0.0.3 metric 100
+10.0.0.0/8  via 10.3.0.1 dev ens7
 ```
+
+It (ab)uses the longest prefix match algorithm to deliver the packets to the right interface, and still keep the amount of routing rules as small as possible.
 
 With the exception of the `internet` network, all VPCs have a Custom Route for `0.0.0.0/0` to the Internal Passthrough Loadbalancer pointing to the `appliance` vm.
 The `internet` VPC has `0.0.0.0/0` pointed to the `Default Internet Gateway` to allow Cloud NAT to connect to the internet.
@@ -66,11 +60,11 @@ The `internet` VPC has `0.0.0.0/0` pointed to the `Default Internet Gateway` to 
 
 ## IP Address Management
 
-Each network has a Class B range (`/16`) assigned, with the first Class C (`/24`) assigned to the routing `appliance` subnet.
+Each network has a `/16` assigned, with the first `/24` assigned to the routing `appliance` subnet.
 The first usable ip address in the `appliance` subnets (`10.x.0.2/32`) is assigned to an Internal Passthrough Loadbalancer.
 This loadbalancer allows for multiple Compute Instances to act as networking/routing/firewall appliance.
 
-This layout was chosen to optimize on routing rules inside the `appliance` vm.
+This layout was chosen to optimize on routing rules inside the `appliance` vm, and to make routing predictable for humans.
 
 Multiple appliances are outside the scope of this example.
 
