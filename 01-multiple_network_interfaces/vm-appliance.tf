@@ -60,38 +60,38 @@ resource "google_compute_instance" "appliance" {
     enable-osconfig = "TRUE"
   }
   metadata_startup_script = <<EOT
-    #!/bin/bash
-    # Enable forwarding
-    sysctl -w net.ipv4.ip_forward=1
+#!/bin/bash
+# Enable forwarding
+sysctl -w net.ipv4.ip_forward=1
 
-    ip route add default gw ${cidrhost(local.subnets["internet-appliance"].cidr, 1)}
-    iptables -A INPUT -j ACCEPT
+ip route add default gw ${cidrhost(local.subnets["internet-appliance"].cidr, 1)}
+iptables -A INPUT -j ACCEPT
 
-    ip a add ${cidrhost(local.subnets["internet-appliance"].cidr, 2)}/32 dev ens4:0
-    ip route add ${var.networks["internet"]} via ${cidrhost(local.subnets["internet-appliance"].cidr, 1)}
-    iptables -t nat -A POSTROUTING -o ens4 -j MASQUERADE --random
-    iptables -A FORWARD -i ens4 -o ens5 -m conntrack --ctstate RELATED, ESTABLISHED -j ACCEPT
-    iptables -A FORWARD -i ens4 -o ens6 -m conntrack --ctstate RELATED, ESTABLISHED -j ACCEPT
-    iptables -A FORWARD -i ens4 -o ens7 -m conntrack --ctstate RELATED, ESTABLISHED -j ACCEPT
+ip a add ${cidrhost(local.subnets["internet-appliance"].cidr, 2)}/32 dev ens4:0
+ip route add ${var.networks["internet"]} via ${cidrhost(local.subnets["internet-appliance"].cidr, 1)}
+iptables -t nat -A POSTROUTING -o ens4 -j MASQUERADE --random
+iptables -A FORWARD -i ens4 -o ens5 -m conntrack --ctstate RELATED, ESTABLISHED -j ACCEPT
+iptables -A FORWARD -i ens4 -o ens6 -m conntrack --ctstate RELATED, ESTABLISHED -j ACCEPT
+iptables -A FORWARD -i ens4 -o ens7 -m conntrack --ctstate RELATED, ESTABLISHED -j ACCEPT
 
-    ip a add ${cidrhost(local.subnets["web-appliance"].cidr, 2)}/32 dev ens5:0
-    ip route add ${var.networks["web"]} via ${cidrhost(local.subnets["web-appliance"].cidr, 1)}
-    iptables -A FORWARD -i ens5 -o ens4 -j ACCEPT
-    iptables -A FORWARD -i ens5 -o ens6 -j ACCEPT
-    iptables -A FORWARD -i ens5 -o ens7 -j ACCEPT
+ip a add ${cidrhost(local.subnets["web-appliance"].cidr, 2)}/32 dev ens5:0
+ip route add ${var.networks["web"]} via ${cidrhost(local.subnets["web-appliance"].cidr, 1)}
+iptables -A FORWARD -i ens5 -o ens4 -j ACCEPT
+iptables -A FORWARD -i ens5 -o ens6 -j ACCEPT
+iptables -A FORWARD -i ens5 -o ens7 -j ACCEPT
 
-    ip a add ${cidrhost(local.subnets["backend-appliance"].cidr, 2)}/32 dev ens6:0
-    ip route add ${var.networks["backend"]} via ${cidrhost(local.subnets["backend-appliance"].cidr, 1)}
-    iptables -A FORWARD -i ens6 -o ens4 -j ACCEPT
-    iptables -A FORWARD -i ens6 -o ens5 -j ACCEPT
-    iptables -A FORWARD -i ens6 -o ens7 -j ACCEPT
+ip a add ${cidrhost(local.subnets["backend-appliance"].cidr, 2)}/32 dev ens6:0
+ip route add ${var.networks["backend"]} via ${cidrhost(local.subnets["backend-appliance"].cidr, 1)}
+iptables -A FORWARD -i ens6 -o ens4 -j ACCEPT
+iptables -A FORWARD -i ens6 -o ens5 -j ACCEPT
+iptables -A FORWARD -i ens6 -o ens7 -j ACCEPT
 
-    ip a add ${cidrhost(local.subnets["onprem-appliance"].cidr, 2)}/32 dev ens7:0
-    ip route add ${var.networks["onprem"]} via ${cidrhost(local.subnets["onprem-appliance"].cidr, 1)}
-    iptables -A FORWARD -i ens7 -o ens4 -j ACCEPT
-    iptables -A FORWARD -i ens7 -o ens5 -j ACCEPT
-    iptables -A FORWARD -i ens7 -o ens6 -j ACCEPT
-  EOT
+ip a add ${cidrhost(local.subnets["onprem-appliance"].cidr, 2)}/32 dev ens7:0
+ip route add ${var.networks["onprem"]} via ${cidrhost(local.subnets["onprem-appliance"].cidr, 1)}
+iptables -A FORWARD -i ens7 -o ens4 -j ACCEPT
+iptables -A FORWARD -i ens7 -o ens5 -j ACCEPT
+iptables -A FORWARD -i ens7 -o ens6 -j ACCEPT
+EOT
 
   service_account {
     email  = google_service_account.appliance.email
