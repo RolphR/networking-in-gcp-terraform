@@ -21,6 +21,11 @@ resource "google_compute_forwarding_rule" "producer" {
   port_range            = "80"
   network               = module.vpc_producer.vpc.name
   subnetwork            = google_compute_subnetwork.producer[each.key].name
+
+  # There is an implicit dependency on INTERNAL_MANAGED forwarding_rules and the REGIONAL_MANAGED_PROXY subnet (in the same region) with state ACTIVE
+  depends_on = [
+    google_compute_subnetwork.producer_proxy,
+  ]
 }
 
 resource "google_compute_region_target_http_proxy" "producer" {
